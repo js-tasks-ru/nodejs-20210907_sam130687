@@ -32,53 +32,57 @@ server.on('request', (req, res) => {
   };  
 
   switch (req.method) {
-    case 'POST':
+    case 'POST':   
         const limitedStream = new LimitSizeStream({limit: limitNum});
         const outStream = fs.createWriteStream(filepath); 
-       
-        limitedStream.pipe(outStream);
-
-        req.on('data', function (data) {
-          limitedStream.write(data);
-        });
-
-        limitedStream.on('error', (error) => {
+        
+        const deleteFile = () => {
           outStream.destroy();
           fs.unlinkSync(filepath);
+        };
 
-          if (error.code === 'LIMIT_EXCEEDED'){            
+        limitedStream.on('error', (error) => {
+          deleteFile();
+          if (error.code === 'LIMIT_EXCEEDED') {
             res.statusCode = 413;
-            res.end('File bigger then 1Mb');  
+            res.end('File bigger then 1Mb');
           } else {
-            res.statusCode = 500;;
+            res.statusCode = 500;
             res.end(`something went wrong error code: ${error.code}`);
-          };          
+          }
         });
 
-        req.on('error', (error) => {
-            outStream.destroy();
-            fs.unlinkSync(filepath);
-            res.statusCode = 500;;
-            res.end(`something went wrong error code: ${error.code}`);          
+        outStream.on('error', (error) => {
+          deleteFile();
+          res.statusCode = 500;
+          res.end('Internal server error');
         });
 
-        req.on('end', function () {
-          outStream.end;
-          res.end(); 
+        outStream.on('close', () => {
+          res.statusCode = 201;
+          res.end('file has been saved');
         });
+
+        res.on('close', () => {
+          if (!res.finished) {
+            deleteFile();
+          }
+        });
+
+        req.on('error', (err) => {
+          if (err.code === 'ECONNRESET') {
+            deleteFile();
+          }
+        });
+  
+        req.pipe(limitedStream).pipe(outStream);   
+
       break;
 
     default:
       res.statusCode = 501;
       res.end('Not implemented');
   }
-
-  req.on('aborted', () => {
-    res.statusCode = 500;
-    res.end('Connect is aborted');
-    //outStream.destroy();
-    //fs.unlinkSync(filepath);
-  })  
 });
 
 module.exports = server;

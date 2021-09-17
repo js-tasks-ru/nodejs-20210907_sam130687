@@ -20,6 +20,7 @@ server.on('request', (req, res) => {
   if (folders > 1) {
     res.statusCode = 400;
     res.end('Subfolders are not allowed');
+    return;
   };   
   
   switch (req.method) {

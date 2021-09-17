@@ -28,11 +28,14 @@ server.on('request', (req, res) => {
 
   if (folders > 1) {
     setErrorResponse(res, 400, 'Subfolders are not allowed');
+    return;
   };   
-
-  if (fs.existsSync(filepath)) {
+ /* Перенес в outStream.on
+   if (fs.existsSync(filepath)) {
     setErrorResponse(res, 409,'File is exists');
+    return;
   };  
+*/
 
   switch (req.method) {
     case 'POST':   
@@ -44,18 +47,24 @@ server.on('request', (req, res) => {
           fs.unlinkSync(filepath);
         };
 
-        limitedStream.on('error', (error) => {
-          deleteFile();
+        limitedStream.on('error', (error) => {          
           if (error.code === 'LIMIT_EXCEEDED') {
             setErrorResponse(res, 413, 'File bigger then 1Mb');
           } else {
             setErrorResponse(res, 500, `something went wrong error code: ${error.code}`);
-          }
+          };
+          deleteFile();
         });
 
-        outStream.on('error', (error) => {
-          deleteFile();
-          setErrorResponse(res, 500, 'Internal server error');
+        outStream.on('error', (error) => {   
+          switch (err.code) {
+            case 'EEXIST':
+              setErrorResponse(res, 409, `file "${filepath}" already exists`);
+              break;
+            default:
+              setErrorResponse(res, 500, 'unknown error');
+              deleteFile();
+          }          
         });
 
         outStream.on('close', () => {

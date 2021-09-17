@@ -13,6 +13,11 @@ server.on('request', (req, res) => {
 
   const filepath = path.join(__dirname, 'files', pathname);
 
+  const setErrorResponse = (res, code, message) => {
+    res.statusCode = code;
+    res.end(message);
+  };
+
   let folders = 0;
   
   url.pathname.split('/').forEach((element) => {
@@ -22,19 +27,17 @@ server.on('request', (req, res) => {
   });
 
   if (folders > 1) {
-    res.statusCode = 400;
-    res.end('Subfolders are not allowed');
+    setErrorResponse(res, 400, 'Subfolders are not allowed');
   };   
 
   if (fs.existsSync(filepath)) {
-    res.statusCode = 409;
-    res.end('File is exists');
+    setErrorResponse(res, 409,'File is exists');
   };  
 
   switch (req.method) {
     case 'POST':   
         const limitedStream = new LimitSizeStream({limit: limitNum});
-        const outStream = fs.createWriteStream(filepath); 
+        const outStream = fs.createWriteStream(filepath, {flags: 'wx'}); 
         
         const deleteFile = () => {
           outStream.destroy();
@@ -44,23 +47,19 @@ server.on('request', (req, res) => {
         limitedStream.on('error', (error) => {
           deleteFile();
           if (error.code === 'LIMIT_EXCEEDED') {
-            res.statusCode = 413;
-            res.end('File bigger then 1Mb');
+            setErrorResponse(res, 413, 'File bigger then 1Mb');
           } else {
-            res.statusCode = 500;
-            res.end(`something went wrong error code: ${error.code}`);
+            setErrorResponse(res, 500, `something went wrong error code: ${error.code}`);
           }
         });
 
         outStream.on('error', (error) => {
           deleteFile();
-          res.statusCode = 500;
-          res.end('Internal server error');
+          setErrorResponse(res, 500, 'Internal server error');
         });
 
         outStream.on('close', () => {
-          res.statusCode = 201;
-          res.end('file has been saved');
+          setErrorResponse(res, 201, 'file has been saved');
         });
 
         res.on('close', () => {
@@ -82,8 +81,7 @@ server.on('request', (req, res) => {
         });
         
         req.on('aborted', () => {
-          res.statusCode = 500;
-          res.end('Connect is aborted');
+          setErrorResponse(res, 500, 'Connect is aborted');
           deleteFile();
         }); 
   

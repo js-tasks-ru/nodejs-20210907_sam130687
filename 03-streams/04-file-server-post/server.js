@@ -47,11 +47,11 @@ server.on('request', (req, res) => {
           fs.unlinkSync(filepath);
         };
 
-        limitedStream.on('error', (error) => {          
-          if (error.code === 'LIMIT_EXCEEDED') {
+        limitedStream.on('error', (err) => {          
+          if (err.code == 'LIMIT_EXCEEDED') {
             setErrorResponse(res, 413, 'File bigger then 1Mb');
           } else {
-            setErrorResponse(res, 500, `something went wrong error code: ${error.code}`);
+            setErrorResponse(res, 500, `something went wrong error code: ${err.code}`);
           };
           deleteFile();
         });
@@ -71,13 +71,13 @@ server.on('request', (req, res) => {
           setErrorResponse(res, 201, 'file has been saved');
         });
 
-        res.on('finish', () => {
+      /*  res.on('finish', () => {
           var stats = fs.statSync(filepath)
           var fileSizeInBytes = stats["size"];
           if (fileSizeInBytes == 0) {
             deleteFile();
           }
-        });
+        });*/
 
         req.on('aborted', () => {
           setErrorResponse(res, 500, 'Connect is aborted');

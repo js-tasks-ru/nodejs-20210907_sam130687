@@ -66,6 +66,12 @@ server.on('request', (req, res) => {
         res.on('close', () => {
           if (!res.finished) {
             deleteFile();
+          };
+
+          var stats = fs.statSync(filepath)
+          var fileSizeInBytes = stats["size"];
+          if (fileSizeInBytes == 0) {
+            deleteFile();
           }
         });
 
@@ -74,6 +80,12 @@ server.on('request', (req, res) => {
             deleteFile();
           }
         });
+        
+        req.on('aborted', () => {
+          res.statusCode = 500;
+          res.end('Connect is aborted');
+          deleteFile();
+        }); 
   
         req.pipe(limitedStream).pipe(outStream);   
 
@@ -82,7 +94,7 @@ server.on('request', (req, res) => {
     default:
       res.statusCode = 501;
       res.end('Not implemented');
-  }
+  } 
 });
 
 module.exports = server;

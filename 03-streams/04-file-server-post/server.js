@@ -57,7 +57,7 @@ server.on('request', (req, res) => {
         });
 
         outStream.on('error', (error) => {   
-          switch (err.code) {
+          switch (error.code) {
             case 'EEXIST':
               setErrorResponse(res, 409, `file "${filepath}" already exists`);
               break;
@@ -67,15 +67,11 @@ server.on('request', (req, res) => {
           }          
         });
 
-        outStream.on('close', () => {
+        outStream.on('finish', () => {
           setErrorResponse(res, 201, 'file has been saved');
         });
 
         res.on('close', () => {
-          if (!res.finished) {
-            deleteFile();
-          };
-
           var stats = fs.statSync(filepath)
           var fileSizeInBytes = stats["size"];
           if (fileSizeInBytes == 0) {
@@ -83,12 +79,6 @@ server.on('request', (req, res) => {
           }
         });
 
-        req.on('error', (err) => {
-          if (err.code === 'ECONNRESET') {
-            deleteFile();
-          }
-        });
-        
         req.on('aborted', () => {
           setErrorResponse(res, 500, 'Connect is aborted');
           deleteFile();

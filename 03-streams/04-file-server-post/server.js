@@ -56,8 +56,8 @@ server.on('request', (req, res) => {
           deleteFile();
         });
 
-        outStream.on('error', (error) => {   
-          switch (error.code) {
+        outStream.on('error', (err) => {   
+          switch (err.code) {
             case 'EEXIST':
               setErrorResponse(res, 409, `file "${filepath}" already exists`);
               break;
@@ -71,7 +71,7 @@ server.on('request', (req, res) => {
           setErrorResponse(res, 201, 'file has been saved');
         });
 
-        res.on('close', () => {
+        res.on('finish', () => {
           var stats = fs.statSync(filepath)
           var fileSizeInBytes = stats["size"];
           if (fileSizeInBytes == 0) {
